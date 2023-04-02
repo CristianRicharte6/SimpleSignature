@@ -4,37 +4,35 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
-const ethers = require("ethers");
+const { ethers } = require("hardhat");
 
 describe("VerifySig", function () {
   async function deployment() {
-    const accounts = await ethers.getSigners();
-
+    const [account0, account1] = await ethers.getSigners();
     // Message to sign
     const message = "This is the way!";
 
-    const signedMessage = await accounts[0].signMessage(message);
+    const signedMessage = await account0.signMessage(message);
 
     const VerifySig = await ethers.getContractFactory("VerifySig");
     const verifySig = await VerifySig.deploy();
     await verifySig.deployed();
 
-    return { accounts, verifySig, signedMessage, message };
+    return { account0, account1, verifySig, signedMessage, message };
   }
 
   describe("Deployment", function () {
     it("", async function () {
-      const { accounts, verifySig, signedMessage, message } = await loadFixture(
-        deployment
-      );
+      const { account0, account1, verifySig, signedMessage, message } =
+        await loadFixture(deployment);
 
       const HashedMessage = await verifySig
-        .connect(accounts[0])
+        .connect(account0)
         .getMessageHashed(message);
 
       expect(
-        await verifySig.verify(accounts[0].address, HashedMessage, signedMessage)
-      ).to.be(true);
+        await verifySig.verify(account0.address, HashedMessage, signedMessage)
+      ).to.equal(true);
     });
   });
 });
