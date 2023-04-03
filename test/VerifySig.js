@@ -8,31 +8,70 @@ const { ethers } = require("hardhat");
 
 describe("VerifySig", function () {
   async function deployment() {
-    const [account0, account1] = await ethers.getSigners();
-    // Message to sign
-    const message = "This is the way!";
-
-    const signedMessage = await account0.signMessage(message);
+    const [signer, account1] = await ethers.getSigners();
 
     const VerifySig = await ethers.getContractFactory("VerifySig");
     const verifySig = await VerifySig.deploy();
     await verifySig.deployed();
 
-    return { account0, account1, verifySig, signedMessage, message };
+    // 1) Hash message to sign.
+    const message = "This is the way!";
+    const to = "0x4B229Ed260cc6AA763c17C412162d46f2b4caF52";
+    const amount = 0;
+    const nonce = 0;
+
+    const hashedMessage = await verifySig.getMessageHash(
+      to,
+      amount,
+      message,
+      nonce
+    );
+
+    // 2) Sign message hashed.
+    const signedMessage = await verifySig.getEthSignedMessageHash(
+      hashedMessage
+    );
+
+    console.log("Lenght: ", signedMessage.length);
+    console.log(signedMessage);
+
+    return {
+      signer,
+      account1,
+      verifySig,
+      signedMessage,
+      hashedMessage,
+      message,
+      to,
+      amount,
+      nonce,
+    };
   }
 
   describe("Deployment", function () {
-    it("", async function () {
-      const { account0, account1, verifySig, signedMessage, message } =
-        await loadFixture(deployment);
+    it("Verify signature", async function () {
+      const {
+        signer,
+        account1,
+        verifySig,
+        signedMessage,
+        hashedMessage,
+        message,
+        to,
+        amount,
+        nonce,
+      } = await loadFixture(deployment);
 
-      const HashedMessage = await verifySig
-        .connect(account0)
-        .getMessageHashed(message);
+      const result = await verifySig.verify(
+        signer.address,
+        to,
+        amount,
+        message,
+        nonce,
+        signedMessage
+      );
 
-      expect(
-        await verifySig.verify(account0.address, HashedMessage, signedMessage)
-      ).to.equal(true);
+      expect(await verifySig.verify(result)).to.equal(true);
     });
   });
 });
